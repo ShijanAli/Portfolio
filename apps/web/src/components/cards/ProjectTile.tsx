@@ -12,7 +12,10 @@ export function ProjectTile({ project, index }: { project: Project; index: numbe
       style={{ '--reveal-delay': `${(index % 2) * 90}ms` } as React.CSSProperties}
       className="h-full"
     >
-      <Card className="group flex h-full flex-col transition-colors hover:border-muted/50">
+      <Card
+        data-cursor="View"
+        className="group flex h-full flex-col transition-colors hover:border-muted/50"
+      >
         <div className="relative aspect-[16/10] overflow-hidden border-b border-border">
           <div className="absolute inset-0 transition-transform duration-700 ease-out-expo group-hover:scale-105">
             <ProjectVisual project={project} index={index} />

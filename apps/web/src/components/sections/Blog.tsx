@@ -21,7 +21,10 @@ export function PostCard({ post, index = 0, headingLevel: Heading = 'h3' }: Post
       style={{ '--reveal-delay': `${index * 90}ms` } as React.CSSProperties}
       className="h-full"
     >
-      <Card className="group flex h-full flex-col transition-colors hover:border-muted/50">
+      <Card
+        data-cursor="Read"
+        className="group flex h-full flex-col transition-colors hover:border-muted/50"
+      >
         <div className="relative aspect-[16/10] overflow-hidden border-b border-border bg-raised">
           {post.coverImage ? (
             <Image

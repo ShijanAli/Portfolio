@@ -8,7 +8,9 @@ import { GoogleAnalytics } from '@/components/layout/GoogleAnalytics';
 import { Header } from '@/components/layout/Header';
 import { JsonLd } from '@/components/layout/JsonLd';
 import { navLinksOf } from '@/components/layout/navigation';
+import { Cursor } from '@/components/motion/Cursor';
 import { MOTION_INIT_SCRIPT, MotionRoot } from '@/components/motion/MotionRoot';
+import { PageTransition } from '@/components/motion/PageTransition';
 import { getSettings } from '@/lib/api';
 import { buildSiteJsonLd, siteUrlOf } from '@/lib/seo';
 import './globals.css';
@@ -56,9 +58,12 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
           Skip to content
         </a>
         <Header siteName={settings.general.siteName} links={links} cta={settings.hero.primaryCta} />
-        <main id="main">{children}</main>
+        <main id="main">
+          <PageTransition>{children}</PageTransition>
+        </main>
         <Footer settings={settings} links={links} />
         <MotionRoot />
+        <Cursor />
         <Analytics />
         {settings.integrations.gaMeasurementId && (
           <GoogleAnalytics measurementId={settings.integrations.gaMeasurementId} />

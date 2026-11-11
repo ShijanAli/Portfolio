@@ -232,3 +232,69 @@ html.motion [data-split='load'] .split-word > span {
     }
   }
 }
+
+/* The ring that trails the pointer (see components/motion/Cursor.tsx). */
+.cursor-ring {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  margin: -1.125rem 0 0 -1.125rem;
+  border: 1px solid color-mix(in srgb, var(--color-accent-text) 70%, transparent);
+  border-radius: 9999px;
+  pointer-events: none;
+  opacity: 0;
+  transition:
+    opacity 0.3s,
+    width 0.3s var(--ease-out-expo),
+    height 0.3s var(--ease-out-expo),
+    margin 0.3s var(--ease-out-expo),
+    background-color 0.3s;
+
+  &[data-visible='true'] {
+    opacity: 1;
+  }
+  /* Over something clickable: larger, with a soft fill. */
+  &[data-state='active'] {
+    width: 3.5rem;
+    height: 3.5rem;
+    margin: -1.75rem 0 0 -1.75rem;
+    background: color-mix(in srgb, var(--color-accent) 14%, transparent);
+  }
+  /* Over an element with data-cursor: a solid disc carrying its label. */
+  &[data-state='label'] {
+    width: 5rem;
+    height: 5rem;
+    margin: -2.5rem 0 0 -2.5rem;
+    border-color: transparent;
+    background: var(--color-accent-solid);
+  }
+  & > span {
+    color: var(--color-accent-fg);
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+  &[data-state='label'] > span {
+    opacity: 1;
+  }
+}
+
+/*
+ * Page transition: each page fades in when it mounts (see components/motion/PageTransition).
+ * Opacity only: a transform here would break pinned and sticky sections.
+ */
+@keyframes page-enter {
+  from {
+    opacity: 0.01;
+  }
+}
+html.motion .page-enter {
+  animation: page-enter 0.5s ease-out both;
+}
