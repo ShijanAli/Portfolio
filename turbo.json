@@ -15,5 +15,6 @@
     },
     "test": {}
   },
-  "globalDependencies": ["eslint.config.js", "tsconfig.base.json"]
+  "globalDependencies": ["eslint.config.js", "tsconfig.base.json"],
+  "globalPassThroughEnv": ["DATABASE_URL", "JWT_ACCESS_SECRET"]
 }
