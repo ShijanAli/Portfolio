@@ -17,13 +17,50 @@ const book = (startAt: string, extra: object = {}) =>
 
 const emailsTo = (address: string) => testOutbox.filter((message) => message.to.email === address);
 
+/** The booking rules these tests assume, independent of whatever is stored in the database. */
+const TEST_SETTINGS = {
+  timezone: 'Asia/Dhaka',
+  slotDuration: 30,
+  bufferTime: 15,
+  minNoticeHours: 12,
+  maxDaysAhead: 30,
+  maxPerDay: 4,
+  autoConfirm: false,
+};
+
+// Whatever was stored before the tests, put back afterwards.
+let savedAvailability: Awaited<ReturnType<typeof prisma.availability.findMany>>;
+let savedExceptions: Awaited<ReturnType<typeof prisma.availabilityException.findMany>>;
+let savedSettings: Awaited<ReturnType<typeof prisma.bookingSetting.findUnique>>;
+
 beforeAll(async () => {
   const admin = await createTestAdmin();
   auth = admin.auth;
   adminId = admin.user.id;
 
-  // Seeded working hours are Monday to Friday; ask for the coming two weeks.
-  const zone = (await api().get(url('/bookings/settings')).set(auth)).body.data.timezone;
+  // A fresh database (as in CI) has no working hours, so the tests create their own:
+  // every day, 10:00 to 18:00.
+  [savedAvailability, savedExceptions, savedSettings] = await Promise.all([
+    prisma.availability.findMany(),
+    prisma.availabilityException.findMany(),
+    prisma.bookingSetting.findUnique({ where: { id: 'default' } }),
+  ]);
+  await prisma.availability.deleteMany();
+  await prisma.availabilityException.deleteMany();
+  await prisma.availability.createMany({
+    data: Array.from({ length: 7 }, (_, dayOfWeek) => ({
+      dayOfWeek,
+      startTime: '10:00',
+      endTime: '18:00',
+    })),
+  });
+  await prisma.bookingSetting.upsert({
+    where: { id: 'default' },
+    update: TEST_SETTINGS,
+    create: { id: 'default', ...TEST_SETTINGS },
+  });
+
+  const zone = TEST_SETTINGS.timezone;
   const from = DateTime.now().setZone(zone).plus({ days: 2 });
   const res = await api()
     .get(url('/bookings/slots'))
@@ -33,6 +70,14 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await prisma.booking.deleteMany({ where: { email } });
+  await prisma.availability.deleteMany();
+  await prisma.availabilityException.deleteMany();
+  if (savedAvailability.length > 0)
+    await prisma.availability.createMany({ data: savedAvailability });
+  if (savedExceptions.length > 0)
+    await prisma.availabilityException.createMany({ data: savedExceptions });
+  if (savedSettings)
+    await prisma.bookingSetting.update({ where: { id: 'default' }, data: savedSettings });
   await prisma.user.delete({ where: { id: adminId } });
   await prisma.$disconnect();
 });
