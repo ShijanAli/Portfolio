@@ -41,14 +41,12 @@ cp apps/api/.env.example apps/api/.env
 cp apps/web/.env.example apps/web/.env.local
 ```
 
-In `apps/api/.env`, set `JWT_ACCESS_SECRET` and the `SEED_ADMIN_*` values. Then:
+In `apps/api/.env`, set `JWT_ACCESS_SECRET` and the `SEED_ADMIN_*` values. Then one command
+creates the tables, your admin account and **placeholder content** (so the site is not
+empty; everything it adds is marked "Sample" and is meant to be replaced in the admin):
 
 ```bash
-pnpm --filter @portfolio/api db:migrate
-```
-
-```bash
-pnpm --filter @portfolio/api db:seed
+pnpm --filter @portfolio/api db:setup
 ```
 
 ```bash
@@ -61,12 +59,8 @@ pnpm dev
 | Admin   | http://localhost:5173        |
 | API     | http://localhost:4000/api/v1 |
 
-To see the design before writing your own content, add placeholder content
-(everything it adds is marked "Sample" and meant to be replaced):
-
-```bash
-pnpm --filter @portfolio/api db:seed:demo
-```
+Prefer an empty site? Use `db:migrate` and `db:seed` instead of `db:setup`. The placeholder
+content can be added later with `db:seed:demo`; it refuses to run if projects already exist.
 
 Without Brevo and Cloudinary keys, emails are written to the API log and uploads are
 stored in `apps/api/uploads`.

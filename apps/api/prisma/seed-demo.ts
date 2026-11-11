@@ -39,7 +39,7 @@ const SETTINGS: Record<string, object> = {
     siteName: 'Shijan',
     ownerName: 'Md Shijan Ali',
     tagline: 'Full stack developer building ERP, POS and e-commerce software.',
-    bio: 'I am a software engineer who turns complex business processes into fast, clear web applications. Over the years I have built ERP systems, POS software, e-commerce stores and admin panels with React, Vue and Node.js.',
+    bio: 'I am a software engineer with 4+ years of industry experience and 5+ years as a freelancer. I turn complex business processes into fast, clear web applications: ERP systems, POS software, e-commerce stores, admin panels and business websites, built with React, Vue and Node.js.',
     location: 'Bangladesh',
     availableForWork: true,
   },
@@ -197,6 +197,18 @@ async function main() {
 
   await prisma.experience.createMany({
     data: [
+      {
+        company: 'Freelance',
+        position: 'Full Stack Developer',
+        location: 'Remote',
+        employmentType: 'Freelance',
+        startDate: monthsAgo(64),
+        isCurrent: true,
+        description:
+          'Placeholder entry (edit the details). ERP, POS, e-commerce, admin panels and business websites for clients.',
+        highlights: ['Custom software and websites for clients'],
+        techStack: ['React', 'Vue.js', 'Node.js', 'PostgreSQL'],
+      },
       {
         company: 'Sample Software Company',
         position: 'Software Engineer',

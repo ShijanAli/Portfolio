@@ -17,7 +17,8 @@
     "db:studio": "prisma studio",
     "db:seed:demo": "tsx prisma/seed-demo.ts",
     "start:prod": "prisma migrate deploy && node dist/server.js",
-    "seed:prod": "node dist/seed.js"
+    "seed:prod": "node dist/seed.js",
+    "db:setup": "prisma migrate deploy && tsx prisma/seed.ts && tsx prisma/seed-demo.ts"
   },
   "prisma": {
     "schema": "prisma",
