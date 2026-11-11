@@ -1,0 +1,15 @@
+packages:
+  - apps/*
+  - packages/*
+
+onlyBuiltDependencies:
+  - '@prisma/client'
+  - '@prisma/engines'
+  - prisma
+  - argon2
+  - esbuild
+
+# One TypeScript version for the whole repo. Without this, packages that only get it as a
+# peer dependency can resolve a different major version than the one the code is checked with.
+overrides:
+  typescript: ^5.9.3

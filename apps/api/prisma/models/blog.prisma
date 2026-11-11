@@ -1,0 +1,54 @@
+enum PostStatus {
+  DRAFT
+  PUBLISHED
+  SCHEDULED
+  ARCHIVED
+}
+
+model Post {
+  id          String     @id @default(cuid())
+  slug        String     @unique
+  title       String
+  excerpt     String?
+  content     String
+  coverImage  String?
+  status      PostStatus @default(DRAFT)
+  publishedAt DateTime?
+  readingTime Int        @default(1)
+  views       Int        @default(0)
+  isFeatured  Boolean    @default(false)
+  authorId    String
+  categoryId  String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  author   User          @relation(fields: [authorId], references: [id], onDelete: Restrict)
+  category BlogCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  seo      Seo?
+  tags     Tag[]
+
+  @@index([status, publishedAt])
+  @@index([categoryId])
+}
+
+model BlogCategory {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  slug        String   @unique
+  description String?
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  posts Post[]
+}
+
+model Tag {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  slug      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  posts Post[]
+}

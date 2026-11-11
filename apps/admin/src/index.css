@@ -1,0 +1,91 @@
+@import 'tailwindcss';
+
+/* Design tokens. Every color in the admin comes from here. */
+@theme {
+  --color-bg: #0b0d12;
+  --color-surface: #12151c;
+  --color-raised: #1a1e27;
+  --color-border: #262b36;
+  --color-fg: #e7e9ee;
+  --color-muted: #8b93a3;
+  --color-accent: #7c5cff;
+  /* Deeper accent for filled buttons: white text on it passes WCAG AA (4.5:1). */
+  --color-accent-solid: #7255eb;
+  /* Lighter accent for text and icons: readable (4.5:1) at small sizes on dark surfaces. */
+  --color-accent-text: #8f74ff;
+  --color-accent-fg: #ffffff;
+  --color-danger: #f0506e;
+  --color-success: #2fbf8f;
+  --color-warning: #f0b040;
+
+  --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+
+@layer base {
+  html {
+    color-scheme: dark;
+  }
+
+  body {
+    @apply bg-bg text-fg font-sans text-sm antialiased;
+  }
+
+  :focus-visible {
+    @apply outline-accent outline-2 outline-offset-2;
+  }
+
+  ::selection {
+    @apply bg-accent/40;
+  }
+}
+
+/* Content typed in the rich text editor. */
+@layer components {
+  .rich-text {
+    @apply leading-relaxed;
+
+    & > * + * {
+      @apply mt-3;
+    }
+    & h2 {
+      @apply mt-6 text-xl font-semibold;
+    }
+    & h3 {
+      @apply mt-5 text-lg font-semibold;
+    }
+    & ul {
+      @apply list-disc pl-6;
+    }
+    & ol {
+      @apply list-decimal pl-6;
+    }
+    & a {
+      @apply text-accent-text underline;
+    }
+    & blockquote {
+      @apply border-border text-muted border-l-2 pl-4 italic;
+    }
+    & code {
+      @apply bg-raised rounded px-1 py-0.5 font-mono text-[0.85em];
+    }
+    & pre {
+      @apply bg-raised overflow-x-auto rounded-lg p-3;
+    }
+    & pre code {
+      @apply bg-transparent p-0;
+    }
+    & img {
+      @apply border-border max-w-full rounded-lg border;
+    }
+  }
+}
+
+/*
+ * Chart colors. Series hues come from a validated categorical palette (dark steps), in a
+ * fixed order: slot 1 blue, slot 2 orange. Text in charts uses the normal text tokens.
+ */
+@theme {
+  --color-series-1: #3987e5;
+  --color-series-2: #d95926;
+  --color-grid: #232833;
+}

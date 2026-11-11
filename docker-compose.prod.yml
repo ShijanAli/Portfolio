@@ -1,0 +1,106 @@
+# Production stack: database, API, website, admin panel and an HTTPS reverse proxy.
+#
+#   cp .env.production.example .env.production      # then fill it in
+#   docker compose -f docker-compose.prod.yml --env-file .env.production up -d --build
+#
+# See DEPLOYMENT.md for the full walkthrough.
+
+name: portfolio
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-portfolio}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env.production}
+      POSTGRES_DB: ${POSTGRES_DB:-portfolio}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      DATABASE_URL: postgresql://${POSTGRES_USER:-portfolio}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-portfolio}?schema=public
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:?Set JWT_ACCESS_SECRET in .env.production}
+      CORS_ORIGINS: https://${SITE_DOMAIN},https://admin.${SITE_DOMAIN}
+      WEB_URL: https://${SITE_DOMAIN}
+      WEB_INTERNAL_URL: http://web:3000
+      API_PUBLIC_URL: https://api.${SITE_DOMAIN}
+      WEB_REVALIDATE_SECRET: ${REVALIDATE_SECRET:?Set REVALIDATE_SECRET in .env.production}
+      BREVO_API_KEY: ${BREVO_API_KEY:-}
+      MAIL_FROM_NAME: ${MAIL_FROM_NAME:-Portfolio}
+      MAIL_FROM_EMAIL: ${MAIL_FROM_EMAIL:-}
+      ADMIN_NOTIFY_EMAIL: ${ADMIN_NOTIFY_EMAIL:-}
+      CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME:-}
+      CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY:-}
+      CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET:-}
+      GA4_PROPERTY_ID: ${GA4_PROPERTY_ID:-}
+      GA4_CLIENT_EMAIL: ${GA4_CLIENT_EMAIL:-}
+      GA4_PRIVATE_KEY: ${GA4_PRIVATE_KEY:-}
+      # Read only by the one-time seed command that creates the first admin.
+      SEED_ADMIN_NAME: ${SEED_ADMIN_NAME:-Admin}
+      SEED_ADMIN_EMAIL: ${SEED_ADMIN_EMAIL:-}
+      SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:-}
+    volumes:
+      # Only used when Cloudinary is not configured.
+      - uploads:/app/uploads
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: https://api.${SITE_DOMAIN}/api/v1
+        NEXT_PUBLIC_SITE_URL: https://${SITE_DOMAIN}
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    environment:
+      # Server-side rendering talks to the API directly, inside the Docker network.
+      API_URL: http://api:4000/api/v1
+      REVALIDATE_SECRET: ${REVALIDATE_SECRET}
+
+  admin:
+    build:
+      context: .
+      dockerfile: apps/admin/Dockerfile
+      args:
+        VITE_API_URL: https://api.${SITE_DOMAIN}/api/v1
+    restart: unless-stopped
+
+  # Terminates HTTPS (certificates are obtained and renewed automatically) and routes
+  # each hostname to its service. Nothing else is reachable from outside.
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on: [web, admin, api]
+    ports:
+      - '80:80'
+      - '443:443'
+    environment:
+      SITE_DOMAIN: ${SITE_DOMAIN:?Set SITE_DOMAIN in .env.production}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  postgres_data:
+  uploads:
+  caddy_data:
+  caddy_config:

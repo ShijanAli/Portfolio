@@ -1,0 +1,168 @@
+enum ContentStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum TechnologyCategory {
+  FRONTEND
+  BACKEND
+  DATABASE
+  DEVOPS
+  MOBILE
+  TOOL
+  OTHER
+}
+
+model Project {
+  id         String        @id @default(cuid())
+  slug       String        @unique
+  title      String
+  summary    String
+  content    String?
+  coverImage String?
+  gallery    String[]
+  liveUrl    String?
+  githubUrl  String?
+  role       String?
+  client     String?
+  startDate  DateTime?
+  endDate    DateTime?
+  isFeatured Boolean       @default(false)
+  order      Int           @default(0)
+  status     ContentStatus @default(DRAFT)
+  views      Int           @default(0)
+  categoryId String?
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+
+  category     ProjectCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  seo          Seo?
+  technologies Technology[]
+
+  @@index([status, order])
+  @@index([categoryId])
+}
+
+model ProjectCategory {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  slug      String   @unique
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  projects Project[]
+}
+
+model Technology {
+  id          String             @id @default(cuid())
+  name        String             @unique
+  slug        String             @unique
+  icon        String?
+  category    TechnologyCategory @default(OTHER)
+  proficiency Int?
+  isFeatured  Boolean            @default(false)
+  isActive    Boolean            @default(true)
+  order       Int                @default(0)
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  projects Project[]
+
+  @@index([category, order])
+}
+
+model Service {
+  id            String        @id @default(cuid())
+  slug          String        @unique
+  title         String
+  shortDesc     String
+  content       String?
+  icon          String?
+  coverImage    String?
+  features      String[]
+  startingPrice Decimal?      @db.Decimal(10, 2)
+  currency      String        @default("USD")
+  order         Int           @default(0)
+  status        ContentStatus @default(DRAFT)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  seo      Seo?
+  faqs     ServiceFaq[]
+  bookings Booking[]
+
+  @@index([status, order])
+}
+
+model ServiceFaq {
+  id        String   @id @default(cuid())
+  serviceId String
+  question  String
+  answer    String
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  service Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  @@index([serviceId, order])
+}
+
+model Experience {
+  id             String    @id @default(cuid())
+  company        String
+  position       String
+  location       String?
+  employmentType String?
+  companyUrl     String?
+  companyLogo    String?
+  startDate      DateTime
+  endDate        DateTime?
+  isCurrent      Boolean   @default(false)
+  description    String?
+  highlights     String[]
+  techStack      String[]
+  order          Int       @default(0)
+  isActive       Boolean   @default(true)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([isActive, startDate])
+}
+
+model Education {
+  id           String    @id @default(cuid())
+  institute    String
+  degree       String
+  fieldOfStudy String?
+  startDate    DateTime
+  endDate      DateTime?
+  isCurrent    Boolean   @default(false)
+  grade        String?
+  description  String?
+  order        Int       @default(0)
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([isActive, startDate])
+}
+
+model Testimonial {
+  id         String   @id @default(cuid())
+  name       String
+  role       String?
+  company    String?
+  avatar     String?
+  message    String
+  rating     Int      @default(5)
+  isFeatured Boolean  @default(false)
+  isActive   Boolean  @default(true)
+  order      Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([isActive, order])
+}

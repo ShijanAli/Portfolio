@@ -1,0 +1,74 @@
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
+
+// Weekly recurring availability. Times are "HH:mm" in BookingSetting.timezone.
+model Availability {
+  id        String   @id @default(cuid())
+  dayOfWeek Int // 0 = Sunday ... 6 = Saturday
+  startTime String
+  endTime   String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([dayOfWeek])
+}
+
+// One-off overrides: a day off, or custom hours for a specific date.
+model AvailabilityException {
+  id        String   @id @default(cuid())
+  date      DateTime @unique @db.Date
+  isOff     Boolean  @default(true)
+  startTime String?
+  endTime   String?
+  note      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Singleton row (id = "default").
+model BookingSetting {
+  id             String   @id @default("default")
+  timezone       String   @default("Asia/Dhaka")
+  slotDuration   Int      @default(30) // minutes
+  bufferTime     Int      @default(15) // minutes between meetings
+  minNoticeHours Int      @default(12)
+  maxDaysAhead   Int      @default(30)
+  maxPerDay      Int      @default(4)
+  autoConfirm    Boolean  @default(false)
+  updatedAt      DateTime @updatedAt
+}
+
+model Booking {
+  id             String        @id @default(cuid())
+  code           String        @unique
+  serviceId      String?
+  name           String
+  email          String
+  phone          String?
+  company        String?
+  message        String?
+  startAt        DateTime // UTC
+  endAt          DateTime // UTC
+  clientTimezone String
+  status         BookingStatus @default(PENDING)
+  meetLink       String?
+  googleEventId  String?
+  manageToken    String        @unique
+  adminNote      String?
+  cancelReason   String?
+  reminderSentAt DateTime?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  service Service? @relation(fields: [serviceId], references: [id], onDelete: SetNull)
+
+  @@index([startAt])
+  @@index([status, startAt])
+  @@index([email])
+}

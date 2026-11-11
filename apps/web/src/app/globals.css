@@ -1,0 +1,234 @@
+@import 'tailwindcss';
+
+/* Design tokens. Every color, font and easing of the site comes from here. */
+@theme {
+  --color-bg: #07070b;
+  --color-surface: #0f0f16;
+  --color-raised: #171721;
+  --color-border: #23232f;
+  --color-fg: #f2f2f7;
+  --color-muted: #9d9db2;
+  /* Set from the admin's theme setting in the root layout. */
+  --color-accent: var(--accent, #7c5cff);
+  /* Slightly deeper accent for filled buttons: white text on it passes WCAG AA (4.5:1). */
+  --color-accent-solid: color-mix(in srgb, var(--color-accent) 92%, black);
+  /* Lighter accent for text and icons: readable (4.5:1) at small sizes on dark surfaces. */
+  --color-accent-text: color-mix(in srgb, var(--color-accent) 85%, white);
+  --color-accent-fg: #ffffff;
+  --color-success: #2fbf8f;
+  --color-danger: #f0506e;
+
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+
+  --animate-marquee: marquee var(--marquee-duration, 40s) linear infinite;
+  --animate-float: float 6s ease-in-out infinite;
+
+  @keyframes marquee {
+    to {
+      transform: translateX(-50%);
+    }
+  }
+  @keyframes float {
+    50% {
+      transform: translateY(-10px);
+    }
+  }
+}
+
+@layer base {
+  html {
+    color-scheme: dark;
+    scroll-padding-top: 5rem;
+  }
+
+  body {
+    @apply bg-bg text-fg font-sans antialiased;
+  }
+
+  ::selection {
+    @apply bg-accent/40;
+  }
+
+  :focus-visible {
+    @apply outline-accent outline-2 outline-offset-4;
+  }
+}
+
+/* Smooth scrolling (Lenis) */
+html.lenis,
+html.lenis body {
+  height: auto;
+}
+.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+.lenis.lenis-stopped {
+  overflow: hidden;
+}
+
+/*
+ * Scroll reveals. `html.motion` is set by an inline script before first paint, only when
+ * JavaScript runs and the visitor has not asked for reduced motion. Without it, everything
+ * is simply visible: content never depends on an animation having played.
+ */
+html.motion [data-reveal] {
+  opacity: 0;
+  transform: translateY(2rem);
+  transition:
+    opacity 0.9s var(--ease-out-expo),
+    transform 0.9s var(--ease-out-expo);
+  transition-delay: var(--reveal-delay, 0ms);
+}
+html.motion [data-reveal].is-visible {
+  opacity: 1;
+  transform: none;
+}
+
+/*
+ * Content visible without scrolling uses `data-reveal="load"` / `data-split="load"`: the
+ * same entrance, but as a CSS animation that starts with the first paint. It must not wait
+ * for JavaScript, because this is the page's largest content and its paint time is the LCP.
+ */
+@keyframes reveal-rise {
+  from {
+    /*
+     * Not quite 0 on purpose: browsers do not count an element that is first painted
+     * fully transparent towards LCP, even once it has faded in. Starting a hair above
+     * zero looks identical and lets the metric reflect when the text really appears.
+     */
+    opacity: 0.01;
+    transform: translateY(2rem);
+  }
+}
+@keyframes word-rise {
+  from {
+    transform: translateY(110%);
+  }
+}
+html.motion [data-reveal='load'] {
+  opacity: 1;
+  transform: none;
+  transition: none;
+  animation: reveal-rise 0.9s var(--ease-out-expo) both;
+  animation-delay: var(--reveal-delay, 0ms);
+}
+
+/* Headings that rise word by word. The words are real text; only their position animates. */
+.split-word {
+  display: inline-block;
+  overflow: hidden;
+  vertical-align: top;
+  /* Room for descenders, which overflow:hidden would otherwise clip. */
+  padding-bottom: 0.12em;
+  margin-bottom: -0.12em;
+}
+.split-word > span {
+  display: inline-block;
+}
+html.motion [data-split] .split-word > span {
+  transform: translateY(110%);
+  transition: transform 1s var(--ease-out-expo);
+  transition-delay: calc(var(--word-index) * 45ms + var(--reveal-delay, 0ms));
+}
+html.motion [data-split].is-visible .split-word > span {
+  transform: none;
+}
+html.motion [data-split='load'] .split-word > span {
+  transform: none;
+  transition: none;
+  animation: word-rise 1s var(--ease-out-expo) both;
+  animation-delay: calc(var(--word-index) * 45ms + var(--reveal-delay, 0ms));
+}
+
+@layer components {
+  /* Film grain over the whole page: takes the digital edge off flat dark surfaces. */
+  .grain::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    pointer-events: none;
+    opacity: 0.05;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  .text-gradient {
+    background: linear-gradient(120deg, var(--color-fg) 20%, var(--color-accent) 110%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  /* Soft accent glow used behind hero and call-to-action areas. */
+  .glow {
+    background: radial-gradient(
+      closest-side,
+      color-mix(in oklab, var(--color-accent) 45%, transparent),
+      transparent
+    );
+    filter: blur(40px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Long-form content written in the admin's rich text editor (case studies, articles). */
+@layer components {
+  .prose {
+    @apply text-fg/90 text-lg leading-relaxed;
+
+    & > * + * {
+      @apply mt-6;
+    }
+    & h2 {
+      @apply text-fg mt-14 text-3xl font-semibold tracking-tight;
+    }
+    & h3 {
+      @apply text-fg mt-10 text-2xl font-semibold tracking-tight;
+    }
+    & a {
+      @apply text-accent-text underline underline-offset-4;
+    }
+    & strong {
+      @apply text-fg font-semibold;
+    }
+    & ul {
+      @apply list-disc space-y-2 pl-6;
+    }
+    & ol {
+      @apply list-decimal space-y-2 pl-6;
+    }
+    & li::marker {
+      @apply text-accent-text;
+    }
+    & blockquote {
+      @apply border-accent text-fg border-l-2 pl-6 text-xl italic;
+    }
+    & code {
+      @apply bg-raised rounded px-1.5 py-0.5 font-mono text-[0.85em];
+    }
+    & pre {
+      @apply border-border bg-surface overflow-x-auto rounded-2xl border p-5 text-sm leading-relaxed;
+    }
+    & pre code {
+      @apply bg-transparent p-0;
+    }
+    & img {
+      @apply border-border h-auto max-w-full rounded-2xl border;
+    }
+    & hr {
+      @apply border-border;
+    }
+  }
+}

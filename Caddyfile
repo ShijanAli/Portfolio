@@ -1,0 +1,24 @@
+# One domain, three hostnames. Point all three DNS records at this server:
+#   example.com, www.example.com   -> website
+#   admin.example.com              -> admin panel
+#   api.example.com                -> API
+# Keeping them on one registrable domain is what lets the admin's login cookie work.
+
+{$SITE_DOMAIN} {
+	encode zstd gzip
+	reverse_proxy web:3000
+}
+
+www.{$SITE_DOMAIN} {
+	redir https://{$SITE_DOMAIN}{uri} permanent
+}
+
+admin.{$SITE_DOMAIN} {
+	encode zstd gzip
+	reverse_proxy admin:80
+}
+
+api.{$SITE_DOMAIN} {
+	encode zstd gzip
+	reverse_proxy api:4000
+}

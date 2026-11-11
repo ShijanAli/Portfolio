@@ -1,0 +1,74 @@
+enum SubscriberStatus {
+  PENDING
+  CONFIRMED
+  UNSUBSCRIBED
+  BOUNCED
+}
+
+enum CampaignStatus {
+  DRAFT
+  SCHEDULED
+  SENDING
+  SENT
+  FAILED
+}
+
+enum RecipientStatus {
+  QUEUED
+  SENT
+  FAILED
+  BOUNCED
+}
+
+model Subscriber {
+  id               String           @id @default(cuid())
+  email            String           @unique
+  name             String?
+  status           SubscriberStatus @default(PENDING)
+  source           String? // footer | section | blog | import
+  topics           String[]
+  confirmToken     String?          @unique
+  unsubscribeToken String           @unique
+  confirmedAt      DateTime?
+  unsubscribedAt   DateTime?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  recipients CampaignRecipient[]
+
+  @@index([status])
+}
+
+model Campaign {
+  id          String         @id @default(cuid())
+  subject     String
+  preheader   String?
+  content     String
+  status      CampaignStatus @default(DRAFT)
+  topics      String[] // empty = all confirmed subscribers
+  scheduledAt DateTime?
+  sentAt      DateTime?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  recipients CampaignRecipient[]
+
+  @@index([status, scheduledAt])
+}
+
+model CampaignRecipient {
+  id           String          @id @default(cuid())
+  campaignId   String
+  subscriberId String
+  status       RecipientStatus @default(QUEUED)
+  sentAt       DateTime?
+  openedAt     DateTime?
+  clickedAt    DateTime?
+  error        String?
+
+  campaign   Campaign   @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  subscriber Subscriber @relation(fields: [subscriberId], references: [id], onDelete: Cascade)
+
+  @@unique([campaignId, subscriberId])
+  @@index([subscriberId])
+}

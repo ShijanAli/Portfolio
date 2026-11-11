@@ -1,0 +1,66 @@
+// First-party, cookie-free analytics. No IP address is ever stored:
+// visitorHash = sha256(ip + userAgent + a salt that changes every day), so a visitor
+// cannot be followed from one day to the next. One Visitor row = one visitor on one day.
+model Visitor {
+  id          String   @id @default(cuid())
+  visitorHash String   @unique
+  country     String?
+  city        String?
+  device      String? // desktop | mobile | tablet
+  browser     String?
+  os          String?
+  firstSeenAt DateTime @default(now())
+  lastSeenAt  DateTime @default(now())
+
+  sessions VisitorSession[]
+
+  @@index([firstSeenAt])
+}
+
+model VisitorSession {
+  id          String   @id @default(cuid())
+  visitorId   String
+  referrer    String?
+  utmSource   String?
+  utmMedium   String?
+  utmCampaign String?
+  landingPage String
+  startedAt   DateTime @default(now())
+  lastSeenAt  DateTime @default(now())
+
+  visitor   Visitor          @relation(fields: [visitorId], references: [id], onDelete: Cascade)
+  pageViews PageView[]
+  events    AnalyticsEvent[]
+
+  @@index([visitorId, lastSeenAt])
+  @@index([startedAt])
+}
+
+model PageView {
+  id          String   @id @default(cuid())
+  sessionId   String
+  path        String
+  title       String?
+  duration    Int? // seconds
+  scrollDepth Int? // 0-100
+  createdAt   DateTime @default(now())
+
+  session VisitorSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([createdAt, path])
+  @@index([sessionId])
+}
+
+model AnalyticsEvent {
+  id         String   @id @default(cuid())
+  sessionId  String
+  name       String // cv_download | project_click | booking_completed ...
+  path       String?
+  properties Json?
+  createdAt  DateTime @default(now())
+
+  session VisitorSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([name, createdAt])
+  @@index([sessionId])
+}
