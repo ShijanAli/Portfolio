@@ -7,6 +7,7 @@ export default defineConfig({
   },
   test: {
     environment: 'node',
+    env: { CRON_SECRET: 'test-cron-secret-0123456789' },
     include: ['src/**/*.test.ts'],
     fileParallelism: false,
   },

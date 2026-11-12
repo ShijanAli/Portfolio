@@ -27,6 +27,11 @@ const envSchema = z.object({
    * the public WEB_URL (e.g. `http://web:3000` inside a Docker network).
    */
   WEB_INTERNAL_URL: z.url().optional(),
+  /**
+   * Authorizes the scheduled-job endpoints. On Vercel, set it in the project and Vercel
+   * sends it with every cron call. Without it those endpoints are disabled.
+   */
+  CRON_SECRET: z.string().min(16).optional(),
   /** Shared secret for telling the website to refresh cached pages after an edit. */
   WEB_REVALIDATE_SECRET: z.string().min(16).optional(),
 

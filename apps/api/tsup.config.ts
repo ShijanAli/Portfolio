@@ -1,9 +1,9 @@
 import { defineConfig } from 'tsup';
 
 export default defineConfig({
-  // `seed` is built too, so the first admin can be created inside the production image,
-  // where the TypeScript sources and dev tools are not present.
-  entry: { server: 'src/server.ts', seed: 'prisma/seed.ts' },
+  // `server` is the long-running process (Docker, Railway...). `vercel` is the serverless
+  // function. `seed` creates the first admin, where the TypeScript sources are not present.
+  entry: { server: 'src/server.ts', vercel: 'src/vercel.ts', seed: 'prisma/seed.ts' },
   format: ['esm'],
   target: 'node22',
   clean: true,

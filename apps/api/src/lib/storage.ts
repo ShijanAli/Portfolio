@@ -3,6 +3,8 @@ import { mkdir, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { v2 as cloudinary } from 'cloudinary';
 import { env } from '@/config/env';
+import { ApiError } from '@/common/utils/api-error';
+import { isServerless } from './runtime';
 
 export interface UploadOptions {
   folder: string;
@@ -61,6 +63,14 @@ const cloudinaryProvider = (): StorageProvider => {
 /** Development fallback: files are written to ./uploads and served by the API. */
 const localProvider: StorageProvider = {
   async upload(buffer, { folder, extension }) {
+    // A serverless file system is read-only and does not outlive the request.
+    if (isServerless) {
+      throw new ApiError(
+        503,
+        'STORAGE_NOT_CONFIGURED',
+        'File uploads need Cloudinary on this server. Set the CLOUDINARY_* environment variables.',
+      );
+    }
     const publicId = `${folder}/${randomBytes(12).toString('hex')}.${extension}`;
     const target = path.join(LOCAL_UPLOAD_DIR, publicId);
 

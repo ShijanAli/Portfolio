@@ -1,4 +1,5 @@
 import { env, isTest } from '@/config/env';
+import { runInBackground } from './runtime';
 import { logger } from './logger';
 
 export interface EmailAddress {
@@ -79,7 +80,9 @@ export const sendEmail = (message: EmailMessage) => provider.send(message);
  * (notifications, confirmations). Failures are logged.
  */
 export function sendEmailInBackground(message: EmailMessage): void {
-  void sendEmail(message).catch((error: unknown) => {
-    logger.error({ err: error, to: message.to.email, subject: message.subject }, 'Email failed');
-  });
+  runInBackground(
+    sendEmail(message).catch((error: unknown) => {
+      logger.error({ err: error, to: message.to.email, subject: message.subject }, 'Email failed');
+    }),
+  );
 }

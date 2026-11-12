@@ -9,6 +9,7 @@ import blogRoutes from '@/modules/blog/blog.routes';
 import bookingRoutes from '@/modules/booking/booking.routes';
 import campaignRoutes from '@/modules/campaign/campaign.routes';
 import contactRoutes from '@/modules/contact/contact.routes';
+import cronRoutes from '@/modules/cron/cron.routes';
 import dashboardRoutes from '@/modules/dashboard/dashboard.routes';
 import educationRoutes from '@/modules/education/education.routes';
 import experienceRoutes from '@/modules/experience/experience.routes';
@@ -62,6 +63,9 @@ router.use('/settings', settingRoutes);
 router.use('/seo', seoRoutes);
 router.use('/redirects', redirectRoutes);
 router.use('/contact', contactRoutes);
+
+// Scheduled jobs (called by the hosting platform, not by people)
+router.use('/internal/cron', cronRoutes);
 
 // Insights
 router.use('/analytics', analyticsRoutes);

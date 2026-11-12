@@ -85,3 +85,13 @@ model AuditLog {
   @@index([entity, entityId])
   @@index([createdAt])
 }
+
+// Request counters for rate limiting, shared by every server instance. In-memory counters
+// do not work on serverless platforms, where each request can land on a new instance.
+model RateLimit {
+  key     String   @id
+  hits    Int
+  resetAt DateTime
+
+  @@index([resetAt])
+}

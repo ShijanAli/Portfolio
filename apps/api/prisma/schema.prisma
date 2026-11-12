@@ -1,6 +1,9 @@
 // Datasource + generator only. Models live in ./models/*.prisma (one file per domain).
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  // `native` is this machine. `rhel-openssl-3.0.x` is what Vercel runs functions on, so the
+  // right query engine is included even when the build happens somewhere else (CI).
+  binaryTargets = ["native", "rhel-openssl-3.0.x"]
 }
 
 datasource db {

@@ -3,6 +3,7 @@ import { campaignEmail } from '@/emails/newsletter.emails';
 import { logger } from '@/lib/logger';
 import { sendEmail } from '@/lib/mailer';
 import { prisma } from '@/lib/prisma';
+import { isServerless, runInBackground } from '@/lib/runtime';
 
 /**
  * Campaign delivery. Progress lives in the CampaignRecipient table (QUEUED -> SENT/FAILED),
@@ -11,6 +12,12 @@ import { prisma } from '@/lib/prisma';
  */
 
 const BATCH_SIZE = 20;
+
+/**
+ * A serverless function is stopped at its time limit, in the middle of an email if need be.
+ * So delivery pauses on its own a little before that and the next run continues.
+ */
+const DELIVERY_BUDGET_MS = isServerless ? 40_000 : Number.POSITIVE_INFINITY;
 
 /** Campaigns being delivered by this process, so the scheduler does not start them twice. */
 const inProgress = new Set<string>();
@@ -38,7 +45,8 @@ export async function queueRecipients(campaign: Campaign): Promise<number> {
   return count;
 }
 
-async function deliverBatch(campaign: Campaign): Promise<number> {
+/** Exported for tests. */
+export async function deliverBatch(campaign: Campaign): Promise<number> {
   const batch = await prisma.campaignRecipient.findMany({
     where: { campaignId: campaign.id, status: 'QUEUED' },
     include: { subscriber: true },
@@ -48,20 +56,25 @@ async function deliverBatch(campaign: Campaign): Promise<number> {
   for (const recipient of batch) {
     // Someone may have unsubscribed after the campaign was queued.
     if (recipient.subscriber.status !== 'CONFIRMED') {
-      await prisma.campaignRecipient.delete({ where: { id: recipient.id } });
+      await prisma.campaignRecipient.deleteMany({ where: { id: recipient.id, status: 'QUEUED' } });
       continue;
     }
 
+    // Claim the recipient BEFORE sending, with one conditional update. Two workers (a
+    // "Send now" and a scheduled run, or two serverless instances) can both have read this
+    // row as QUEUED; only one of them wins the claim, so nobody is emailed twice.
+    const claimed = await prisma.campaignRecipient.updateMany({
+      where: { id: recipient.id, status: 'QUEUED' },
+      data: { status: 'SENT', sentAt: new Date() },
+    });
+    if (claimed.count === 0) continue;
+
     try {
       await sendEmail(campaignEmail(campaign, recipient.subscriber));
-      await prisma.campaignRecipient.update({
-        where: { id: recipient.id },
-        data: { status: 'SENT', sentAt: new Date() },
-      });
     } catch (error) {
       await prisma.campaignRecipient.update({
         where: { id: recipient.id },
-        data: { status: 'FAILED', error: String(error).slice(0, 500) },
+        data: { status: 'FAILED', sentAt: null, error: String(error).slice(0, 500) },
       });
     }
   }
@@ -78,8 +91,14 @@ export async function deliverCampaign(campaignId: string): Promise<void> {
     const campaign = await prisma.campaign.findUnique({ where: { id: campaignId } });
     if (!campaign || campaign.status !== 'SENDING') return;
 
+    const deadline = Date.now() + DELIVERY_BUDGET_MS;
     while ((await deliverBatch(campaign)) > 0) {
-      // Keep going until no queued recipients are left.
+      // Keep going until no queued recipients are left, or the time budget is used up.
+      if (Date.now() >= deadline) {
+        // Stay in SENDING: the recipients still queued are picked up by the next scheduled run.
+        logger.info({ campaignId }, 'Campaign delivery paused to stay within the time limit');
+        return;
+      }
     }
 
     const [sent, total] = await Promise.all([
@@ -101,5 +120,5 @@ export async function deliverCampaign(campaignId: string): Promise<void> {
 }
 
 export function deliverCampaignInBackground(campaignId: string): void {
-  void deliverCampaign(campaignId);
+  runInBackground(deliverCampaign(campaignId));
 }

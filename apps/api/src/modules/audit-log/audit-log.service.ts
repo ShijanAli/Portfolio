@@ -2,6 +2,7 @@ import type { AuditLog, Prisma } from '@prisma/client';
 import { BaseService } from '@/common/base/base.service';
 import { logger } from '@/lib/logger';
 import { prisma } from '@/lib/prisma';
+import { runInBackground } from '@/lib/runtime';
 import type { AuditAction } from './audit-log.schema';
 
 export interface AuditEntry {
@@ -26,9 +27,11 @@ class AuditLogService extends BaseService<AuditLog, never, never> {
 
   /** Never throws: failing to write the trail must not fail the action being recorded. */
   record(entry: AuditEntry): void {
-    void prisma.auditLog.create({ data: entry }).catch((error: unknown) => {
-      logger.error({ err: error, entry }, 'Could not write audit log');
-    });
+    runInBackground(
+      prisma.auditLog.create({ data: entry }).catch((error: unknown) => {
+        logger.error({ err: error, entry }, 'Could not write audit log');
+      }),
+    );
   }
 }
 

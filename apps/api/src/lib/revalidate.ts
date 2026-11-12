@@ -1,5 +1,6 @@
 import { env, isTest } from '@/config/env';
 import { logger } from './logger';
+import { runInBackground } from './runtime';
 
 /**
  * Tells the website that data with these cache tags changed, so it re-renders the pages
@@ -9,17 +10,19 @@ import { logger } from './logger';
 export function revalidateWebsite(tags: string[]): void {
   if (!env.WEB_REVALIDATE_SECRET || isTest) return;
 
-  void fetch(`${env.WEB_INTERNAL_URL ?? env.WEB_URL}/api/revalidate`, {
-    method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-      'x-revalidate-secret': env.WEB_REVALIDATE_SECRET,
-    },
-    body: JSON.stringify({ tags }),
-    signal: AbortSignal.timeout(5000),
-  }).catch((error: unknown) => {
-    logger.debug({ err: error, tags }, 'Website revalidation failed');
-  });
+  runInBackground(
+    fetch(`${env.WEB_INTERNAL_URL ?? env.WEB_URL}/api/revalidate`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-revalidate-secret': env.WEB_REVALIDATE_SECRET,
+      },
+      body: JSON.stringify({ tags }),
+      signal: AbortSignal.timeout(5000),
+    }).catch((error: unknown) => {
+      logger.debug({ err: error, tags }, 'Website revalidation failed');
+    }),
+  );
 }
 
 /** Every cache tag the website uses: one per kind of content it reads from the API. */

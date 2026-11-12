@@ -79,73 +79,70 @@ gunzip -c backup-2026-01-01.sql.gz | docker compose -f docker-compose.prod.yml \
   --env-file .env.production exec -T postgres psql -U portfolio portfolio
 ```
 
-## B. Managed services (Vercel + an API host)
+## B. Everything on Vercel (three projects) + a database
 
-**The website and the admin panel go on Vercel. The API goes on a host that runs a normal,
-always-on server (Railway, Render or Fly.io), with a PostgreSQL database (Neon or the
-host's own).**
+The website, the admin panel and the API are three separate Vercel projects from this one
+repository, plus a PostgreSQL database (Neon, Supabase or Vercel Postgres).
 
-Why not the API on Vercel too? Vercel runs code as short-lived serverless functions that
-are frozen as soon as the response is sent. This API relies on things that do not survive
-that:
+How the API differs on Vercel (all of this is already handled in the code):
 
-| The API does this                                             | On Vercel                                                           |
-| ------------------------------------------------------------- | ------------------------------------------------------------------- |
-| Booking reminders and scheduled newsletters (a timer)         | The timer never runs                                                |
-| Sends emails, audit logs and cache refreshes _after_ replying | Cut off when the function freezes                                   |
-| Sends a campaign to many subscribers in the background        | Stopped halfway                                                     |
-| Rate limiting kept in memory                                  | Every request may hit a new instance, so it does not limit anything |
-
-It can be made to work (Vercel Cron for the timers, `waitUntil` for work after the reply, a
-shared store for rate limits), but that is a rewrite of those parts, so the guide below
-does not do it.
+| On a normal server                                             | On Vercel                                                                  |
+| -------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| Timers run booking reminders and scheduled newsletters         | **Cron** calls `/api/v1/internal/cron/*` (protected by `CRON_SECRET`)      |
+| Emails, audit entries and cache refresh finish after the reply | Kept alive with `waitUntil` until they finish                              |
+| Rate limits counted in memory                                  | Counted in the database (logins and public forms), shared by all instances |
+| Uploads can go to local disk                                   | **Cloudinary is required**: the file system is read-only                   |
+| Upload limit 8 MB                                              | **4 MB**: Vercel rejects larger request bodies                             |
+| Migrations run when the container starts                       | Run during the production build                                            |
 
 ### 1. Database
 
-Create a PostgreSQL 16 database (Neon, Railway or Supabase). Copy its connection string.
-Use the **direct** one, not a "pooled" / pgbouncer one: the API is a long-running server
-with its own connection pool, and migrations do not work through a pooler.
+Create a PostgreSQL 16 database. You need two connection strings:
 
-### 2. API (Railway, Render or Fly.io)
+- **Pooled** (Neon: the host with `-pooler`; Supabase: the "transaction pooler"). This is
+  `DATABASE_URL`, used by the running API. Add `&pgbouncer=true&connection_limit=5` to it.
+- **Direct** (not pooled). This is `DIRECT_URL`, used only to apply migrations during the build.
 
-Deploy from this GitHub repository using the Dockerfile:
+### 2. API project
 
-- Dockerfile path: `apps/api/Dockerfile`
-- Build context: the **repository root** (not `apps/api`)
-- Health check path: `/api/v1/health`
-- Run **one** instance only (reminders and campaigns run inside the process)
+1. Vercel → **Add New → Project** → import the repository.
+2. **Root Directory:** `apps/api`. Keep **"Include source files outside of the Root
+   Directory"** on. The build runs `scripts/vercel-build.sh` (from `apps/api/vercel.json`).
+3. Environment variables:
 
-Add a custom domain `api.example.com`, then set the environment variables below. The
-container applies database migrations itself every time it starts.
+   | Variable                                                                   | Value                                                |
+   | -------------------------------------------------------------------------- | ---------------------------------------------------- |
+   | `NODE_ENV`                                                                 | `production`                                         |
+   | `DATABASE_URL`                                                             | The **pooled** connection string                     |
+   | `DIRECT_URL`                                                               | The **direct** connection string                     |
+   | `JWT_ACCESS_SECRET`                                                        | `openssl rand -hex 48`                               |
+   | `CRON_SECRET`                                                              | `openssl rand -hex 24`                               |
+   | `CORS_ORIGINS`                                                             | `https://example.com,https://admin.example.com`      |
+   | `WEB_URL`                                                                  | `https://example.com`                                |
+   | `API_PUBLIC_URL`                                                           | `https://api.example.com`                            |
+   | `WEB_REVALIDATE_SECRET`                                                    | `openssl rand -hex 24` (same value as the website's) |
+   | `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`     | Uploads (required)                                   |
+   | `BREVO_API_KEY`, `MAIL_FROM_NAME`, `MAIL_FROM_EMAIL`, `ADMIN_NOTIFY_EMAIL` | Email                                                |
 
-| Variable                                                                   | Value                                                |
-| -------------------------------------------------------------------------- | ---------------------------------------------------- |
-| `NODE_ENV`                                                                 | `production`                                         |
-| `DATABASE_URL`                                                             | The direct connection string from step 1             |
-| `JWT_ACCESS_SECRET`                                                        | `openssl rand -hex 48`                               |
-| `CORS_ORIGINS`                                                             | `https://example.com,https://admin.example.com`      |
-| `WEB_URL`                                                                  | `https://example.com`                                |
-| `API_PUBLIC_URL`                                                           | `https://api.example.com`                            |
-| `WEB_REVALIDATE_SECRET`                                                    | `openssl rand -hex 24` (same value as the website's) |
-| `BREVO_API_KEY`, `MAIL_FROM_NAME`, `MAIL_FROM_EMAIL`, `ADMIN_NOTIFY_EMAIL` | Email                                                |
-| `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`     | Uploads                                              |
+4. Deploy, then add the domain `api.example.com` (**Settings → Domains**).
+5. Check `https://api.example.com/api/v1/health` returns `{"success":true,...}`.
 
-Create the first admin once, from the host's shell or "run command" feature, with
-`SEED_ADMIN_NAME`, `SEED_ADMIN_EMAIL` and `SEED_ADMIN_PASSWORD` set:
+Migrations are applied by the **production** build only, so a preview deployment of a branch
+can never change your production database.
+
+**Create the first admin.** Vercel has no shell, so run the seed from your own computer
+against the database (use the **direct** connection string; the values are only in this
+command, not in a file):
 
 ```bash
-node dist/seed.js
+DATABASE_URL="postgresql://...direct..." SEED_ADMIN_NAME="Your Name" SEED_ADMIN_EMAIL="you@example.com" SEED_ADMIN_PASSWORD="A-long-Passw0rd" JWT_ACCESS_SECRET="any-32-or-more-characters-long-string" pnpm --filter @portfolio/api db:seed
 ```
 
-Check `https://api.example.com/api/v1/health` returns `{"success":true,...}` before going on.
+### 3. Website project
 
-### 3. Website (Vercel)
-
-1. Vercel → **Add New → Project** → import the GitHub repository.
-2. **Root Directory:** `apps/web`. Keep **"Include source files outside of the Root
-   Directory"** switched on: the website uses the packages in `packages/`.
-3. Framework: Next.js (detected). The build command comes from `apps/web/vercel.json`.
-4. Environment variables:
+1. Add another project from the same repository. **Root Directory:** `apps/web`
+   (keep "Include source files outside of the Root Directory" on).
+2. Environment variables:
 
    | Variable               | Value                                 |
    | ---------------------- | ------------------------------------- |
@@ -154,33 +151,64 @@ Check `https://api.example.com/api/v1/health` returns `{"success":true,...}` bef
    | `NEXT_PUBLIC_SITE_URL` | `https://example.com`                 |
    | `REVALIDATE_SECRET`    | Same value as `WEB_REVALIDATE_SECRET` |
 
-5. Deploy, then add the domains `example.com` and `www.example.com` under
-   **Settings → Domains**.
+3. Deploy, then add `example.com` and `www.example.com` as domains.
 
 Deploy the API **first**: the website reads its content from it while building. If the API
-was not reachable, the pages are built empty and fill in on the first visit; restarting the
-API also tells the website to refresh everything.
+was not reachable, pages are built empty and fill in on the first visit.
+`NEXT_PUBLIC_*` values are baked in at build time: after changing one, redeploy.
 
-`NEXT_PUBLIC_*` values are baked in at build time. After changing one, redeploy.
+### 4. Admin project
 
-### 4. Admin panel (Vercel)
+A third project from the same repository. **Root Directory:** `apps/admin`
+(keep "Include source files outside of the Root Directory" on).
+Environment variable: `VITE_API_URL` = `https://api.example.com/api/v1`. Domain:
+`admin.example.com`.
 
-Same steps, as a second Vercel project from the same repository:
+`apps/admin/vercel.json` sends every path to `index.html` (without it, reloading a page like
+`/projects` gives a 404) and adds the security headers.
 
-- **Root Directory:** `apps/admin` (keep "Include source files outside of the Root Directory" on)
-- Environment variable: `VITE_API_URL` = `https://api.example.com/api/v1`
-- Domain: `admin.example.com`
+### Scheduled jobs and your Vercel plan
 
-`apps/admin/vercel.json` already sends every path to `index.html` (without it, reloading a
-page like `/projects` gives a 404) and adds the security headers.
+`apps/api/vercel.json` runs **one cron a day** (03:00 UTC) that does everything: sends
+booking reminders for the next 24 hours, starts scheduled newsletters, finishes any
+campaign that was cut short, and cleans up old data. That is the only frequency the free
+**Hobby** plan allows (a more frequent cron makes the deployment fail).
+
+What that means in practice on Hobby:
+
+- Booking reminders work (they cover the next 24 hours).
+- A newsletter you schedule goes out at the next daily run, not at the exact minute. "Send
+  now" is not affected: it sends immediately.
+- A very large "Send now" (hundreds of subscribers) pauses at the 60-second function limit
+  and continues at the next daily run.
+
+On the **Pro** plan, replace the `crons` in `apps/api/vercel.json` with:
+
+```json
+"crons": [
+  { "path": "/api/v1/internal/cron/reminders", "schedule": "*/10 * * * *" },
+  { "path": "/api/v1/internal/cron/campaigns", "schedule": "* * * * *" },
+  { "path": "/api/v1/internal/cron/maintenance", "schedule": "0 3 * * *" }
+]
+```
+
+and you can raise `maxDuration` for `api/index.js` up to 300.
 
 ### Use your own domain
 
 The admin keeps you signed in with a cookie from `api.example.com`. Browsers only send it
 when the admin and the API are on the **same site**, so they must share one domain, for
-example `admin.example.com` and `api.example.com`. The default `*.vercel.app` and
-`*.up.railway.app` addresses are different sites, so login would appear to work and then
-sign you out on every reload.
+example `admin.example.com` and `api.example.com`. The default `*.vercel.app` addresses are
+different sites from each other, so login would appear to work and then sign you out on every
+reload.
+
+### Other API hosts
+
+An always-on host (Railway, Render, Fly.io) also works and has none of the limits above:
+deploy `apps/api/Dockerfile` with the repository root as build context, run a single
+instance, and set the same environment variables except `CRON_SECRET` and `DIRECT_URL`.
+Its migrations run when the container starts. Only the API changes; the website and admin
+stay on Vercel as described.
 
 ## After the first deploy
 

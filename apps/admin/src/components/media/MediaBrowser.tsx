@@ -113,7 +113,7 @@ export function MediaBrowser({
       ) : files.length === 0 ? (
         <EmptyState
           title="No files here"
-          description="Upload images (JPEG, PNG, WebP, AVIF, GIF) or PDFs up to 8 MB."
+          description="Upload images (JPEG, PNG, WebP, AVIF, GIF) or PDFs up to 4 MB."
         />
       ) : (
         <ul className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-6">
