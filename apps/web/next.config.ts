@@ -2,7 +2,28 @@ import path from 'node:path';
 import type { NextConfig } from 'next';
 import type { RemotePattern } from 'next/dist/shared/lib/image-config';
 
-const apiUrl = new URL(process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api/v1');
+/** Reads the API address from the environment, tolerating stray quotes, spaces and a pasted `NAME=` prefix. */
+function readApiUrl(): URL {
+  const fallback = 'http://localhost:4000/api/v1';
+  const raw = process.env.NEXT_PUBLIC_API_URL;
+  if (!raw?.trim()) return new URL(fallback);
+  const cleaned = raw
+    .trim()
+    .replace(/^NEXT_PUBLIC_API_URL\s*=\s*/, '')
+    .replace(/^["']|["']$/g, '')
+    .trim();
+  try {
+    return new URL(cleaned);
+  } catch {
+    // Vercel hides env values in logs, so describe the shape instead of printing it.
+    throw new Error(
+      `NEXT_PUBLIC_API_URL is not a valid URL (length ${cleaned.length}, starts with "${cleaned.slice(0, 8)}", ` +
+        'expected something like https://your-api.vercel.app/api/v1).',
+    );
+  }
+}
+
+const apiUrl = readApiUrl();
 
 /** In local development, uploads are served by the API on this machine. */
 const apiIsLocal = ['localhost', '127.0.0.1'].includes(apiUrl.hostname);
