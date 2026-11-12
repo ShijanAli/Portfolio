@@ -35,6 +35,9 @@ export async function sendToApi<T>(
   try {
     response = await fetch(`${PUBLIC_API_URL}${path}`, {
       method,
+      // A redirect would silently turn this POST into a GET (and drop the form data).
+      // Stop at the redirect and report it instead.
+      redirect: 'manual',
       headers: body ? { 'content-type': 'application/json' } : undefined,
       body: body ? JSON.stringify(body) : undefined,
     });
@@ -43,6 +46,14 @@ export async function sendToApi<T>(
       0,
       'NETWORK_ERROR',
       'Could not reach the server. Please check your connection.',
+    );
+  }
+
+  if (response.type === 'opaqueredirect') {
+    throw new ApiError(
+      0,
+      'API_REDIRECTS',
+      'The API address is redirecting to another URL. Set NEXT_PUBLIC_API_URL to the final address (check http vs https, www, and the /api/v1 path).',
     );
   }
 

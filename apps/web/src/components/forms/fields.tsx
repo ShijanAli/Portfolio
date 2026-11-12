@@ -68,7 +68,13 @@ export function TextField({
   return (
     <Field label={label} name={name} error={error} hideLabel={hideLabel}>
       {(fieldProps) => (
-        <input {...props} {...fieldProps} className={cn(control, 'h-12', className)} />
+        <input
+          // Browser extensions (password managers, Grammarly) edit inputs before React loads.
+          suppressHydrationWarning
+          {...props}
+          {...fieldProps}
+          className={cn(control, 'h-12', className)}
+        />
       )}
     </Field>
   );
@@ -86,6 +92,7 @@ export function TextAreaField({
     <Field label={label} name={name} error={error} hideLabel={hideLabel}>
       {(fieldProps) => (
         <textarea
+          suppressHydrationWarning
           rows={5}
           {...props}
           {...fieldProps}
@@ -114,6 +121,7 @@ export function SelectField({
     <Field label={label} name={name} error={error} hideLabel={hideLabel}>
       {(fieldProps) => (
         <select
+          suppressHydrationWarning
           {...props}
           {...fieldProps}
           className={cn(control, 'h-12 cursor-pointer', className)}
@@ -139,7 +147,13 @@ export function Honeypot() {
     <div aria-hidden className="absolute -left-[9999px] size-px overflow-hidden">
       <label>
         Website
-        <input type="text" name="website" tabIndex={-1} autoComplete="off" />
+        <input
+          type="text"
+          name="website"
+          tabIndex={-1}
+          autoComplete="off"
+          suppressHydrationWarning
+        />
       </label>
     </div>
   );

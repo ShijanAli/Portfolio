@@ -12,3 +12,5 @@ coverage
 apps/api/uploads
 next-env.d.ts
 *.tsbuildinfo
+# Written by `next dev` on first start
+apps/web/AGENTS.md

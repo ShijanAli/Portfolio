@@ -103,16 +103,23 @@ html.motion [data-reveal].is-visible {
     transform: translateY(2rem);
   }
 }
+/*
+ * Moves with `top`, not `transform`. A transform animation promotes the word to its own
+ * GPU layer, and a heading painted with `background-clip: text` (the hero's gradient name)
+ * cannot be drawn through such a layer: the text simply disappears.
+ */
 @keyframes word-rise {
   from {
-    transform: translateY(110%);
+    top: 1.2em;
   }
 }
 html.motion [data-reveal='load'] {
   opacity: 1;
   transform: none;
   transition: none;
-  animation: reveal-rise 0.9s var(--ease-out-expo) both;
+  /* `backwards`, not `both`: once finished the element returns to its normal style, so it
+     does not stay on a separate GPU layer for the rest of the page's life. */
+  animation: reveal-rise 0.9s var(--ease-out-expo) backwards;
   animation-delay: var(--reveal-delay, 0ms);
 }
 
@@ -137,9 +144,10 @@ html.motion [data-split].is-visible .split-word > span {
   transform: none;
 }
 html.motion [data-split='load'] .split-word > span {
+  position: relative;
   transform: none;
   transition: none;
-  animation: word-rise 1s var(--ease-out-expo) both;
+  animation: word-rise 1s var(--ease-out-expo) backwards;
   animation-delay: calc(var(--word-index) * 45ms + var(--reveal-delay, 0ms));
 }
 
