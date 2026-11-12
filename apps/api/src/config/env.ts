@@ -62,6 +62,10 @@ const definedEnv = Object.fromEntries(
   Object.entries(process.env).filter(([, value]) => value !== ''),
 );
 
+// Anything running on Vercel is production, even if NODE_ENV was copied over from a local
+// .env as "development" (that would turn on dev-only logging and insecure cookies).
+if (definedEnv.VERCEL) definedEnv.NODE_ENV = 'production';
+
 const parsed = envSchema.safeParse(definedEnv);
 
 if (!parsed.success) {
