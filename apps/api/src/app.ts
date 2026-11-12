@@ -2,7 +2,7 @@ import compression from 'compression';
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import express from 'express';
-import helmet from 'helmet';
+import helmetModule from 'helmet';
 import { pinoHttp } from 'pino-http';
 import { API_PREFIX } from '@/config/constants';
 import { env } from '@/config/env';
@@ -12,6 +12,11 @@ import { globalLimiter } from '@/common/middlewares/rate-limit';
 import { logger } from '@/lib/logger';
 import { LOCAL_UPLOAD_DIR, LOCAL_UPLOAD_ROUTE, usesCloudinary } from '@/lib/storage';
 import routes from './routes';
+
+// helmet only ships CommonJS typings (index.d.cts). Type checkers that resolve it as CJS (as
+// the Vercel build does) see the whole module as the default import, so unwrap `.default`.
+const helmet =
+  (helmetModule as unknown as { default?: typeof helmetModule }).default ?? helmetModule;
 
 export function createApp() {
   const app = express();
