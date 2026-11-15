@@ -62,9 +62,19 @@ export const projectsConfig: ResourceConfig<Project> = {
       resource: 'technologies',
       from: (project: Project) => project.technologies.map((technology) => technology.id),
     },
-    { name: 'coverImage', label: 'Cover image', type: 'image' },
+    {
+      name: 'coverImage',
+      label: 'Cover image',
+      type: 'image',
+      help: 'Upload a 16:10 landscape image, ideally 1600 × 1000 px. Every project image uses this same size so cards and pages stay aligned; other ratios get cropped.',
+    },
     featuredField,
-    { name: 'gallery', label: 'Gallery', type: 'images' },
+    {
+      name: 'gallery',
+      label: 'Gallery',
+      type: 'images',
+      help: 'Use the same size as the cover: 16:10 landscape, 1600 × 1000 px. Different sizes will be cropped to fit.',
+    },
     { name: 'content', label: 'Case study', type: 'richtext' },
 
     { name: 'liveUrl', label: 'Live URL', type: 'url', placeholder: 'https://', section: LINKS },

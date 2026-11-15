@@ -94,7 +94,7 @@ export default async function ProjectPage({ params }: PageProps) {
         {project.coverImage && (
           <div
             data-reveal
-            className="relative mb-16 aspect-[16/9] overflow-hidden rounded-3xl border border-border"
+            className="relative mb-16 aspect-[16/10]overflow-hidden rounded-3xl border border-border"
           >
             <Image
               src={project.coverImage}
