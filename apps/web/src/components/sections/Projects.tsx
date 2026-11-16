@@ -89,8 +89,11 @@ function ProjectCard({ project, index }: { project: Project; index: number }) {
             )}
           </div>
         </div>
-        <div className="relative min-h-64 overflow-hidden border-t border-border lg:min-h-[30rem] lg:border-t-0 lg:border-l">
-          <ProjectVisual project={project} index={index} />
+        {/* The panel follows the text height; the image keeps the 16:10 ratio it was uploaded in, centered. */}
+        <div className="flex items-center overflow-hidden border-t border-border bg-raised lg:border-t-0 lg:border-l">
+          <div className="relative aspect-[16/10] w-full">
+            <ProjectVisual project={project} index={index} />
+          </div>
         </div>
       </Card>
     </li>
