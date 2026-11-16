@@ -18,6 +18,9 @@ const envSchema = z.object({
         .filter(Boolean),
     ),
 
+  /** `none` lets the login cookie work when the admin and API are on different sites. */
+  COOKIE_SAME_SITE: z.enum(['lax', 'none']).default('lax'),
+
   /** Public URLs, used to build links in emails and URLs of locally stored uploads. */
   WEB_URL: z.url().default('http://localhost:3000'),
   API_PUBLIC_URL: z.url().default('http://localhost:4000'),

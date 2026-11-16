@@ -1,17 +1,19 @@
 import type { CookieOptions, Request, Response } from 'express';
 import { REFRESH_COOKIE_NAME, REFRESH_COOKIE_PATH } from '@/config/constants';
-import { isProduction } from '@/config/env';
+import { env, isProduction } from '@/config/env';
 import { ApiError } from '@/common/utils/api-error';
 import { ok } from '@/common/utils/api-response';
 import { auditLogService } from '@/modules/audit-log/audit-log.service';
 import { authService, type AuthResult, type ClientContext } from './auth.service';
 
 // The refresh token never reaches JavaScript: httpOnly cookie scoped to the auth routes.
-// SameSite=Lax assumes the admin panel and the API share a registrable domain.
+// SameSite=Lax assumes the admin panel and the API share a registrable domain. When they do
+// not (two *.vercel.app addresses), set COOKIE_SAME_SITE=none so the browser still sends it.
 const cookieOptions: CookieOptions = {
   httpOnly: true,
-  secure: isProduction,
-  sameSite: 'lax',
+  // SameSite=None is only accepted by browsers on secure cookies.
+  secure: isProduction || env.COOKIE_SAME_SITE === 'none',
+  sameSite: env.COOKIE_SAME_SITE,
   path: REFRESH_COOKIE_PATH,
 };
 
