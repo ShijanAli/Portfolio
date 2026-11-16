@@ -30,9 +30,15 @@ async function apiFetch<T>(
   { query, tags }: FetchOptions,
 ): Promise<ApiSuccess<T> | null> {
   try {
-    const response = await fetch(`${API_URL}${path}${toSearch(query)}`, {
-      next: { revalidate: REVALIDATE_SECONDS, tags },
-    });
+    const url = `${API_URL}${path}${toSearch(query)}`;
+    // In dev, writing to the fetch cache makes Next recompile and the browser reload,
+    // which renders again and writes again, so the page reloads forever. Skip the cache there.
+    const response = await fetch(
+      url,
+      process.env.NODE_ENV === 'development'
+        ? { cache: 'no-store' }
+        : { next: { revalidate: REVALIDATE_SECONDS, tags } },
+    );
     if (!response.ok) return null;
     return (await response.json()) as ApiSuccess<T>;
   } catch {
